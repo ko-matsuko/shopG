@@ -73,17 +73,13 @@ class Cart(View):
         else:
             item_incart = ShoppingItemsIncart.objects.filter(user_id = request.session["user_id"])
 
-            print('item_incart:')
-            print(item_incart)
-
             item_list = []
             charge_total = 0
             for item in item_incart:
                 item_detail = ShoppingItem.objects.get(item_id = item.item_id)
-                print('item_detail:')
-                print(item_detail)
 
                 item_dict = {
+                    "item_id": item_detail.item_id,
                     "name":item_detail.name,
                     "color": item_detail.color,
                     "manufacturer":item_detail.manufacturer,
@@ -93,8 +89,6 @@ class Cart(View):
                 item_list.append(item_dict)
                 charge_total += item.amount * item_detail.price
 
-            print('charge_total:')
-            print(charge_total)
             context = {
                 "item_list":item_list,
                 "charge_total":charge_total
@@ -105,11 +99,15 @@ class Cart(View):
         if not request.session.get('is_login', None):
             return redirect('/ec_site/userLogin')
         else:
+
             item_id = request.POST["item_id"]
             new_item = ShoppingItem.objects.get(item_id = item_id)
             item_amount = request.POST["amount"]
 
-            cart_item = ShoppingItemsIncart()
+            if ShoppingItemsIncart.objects.filter(item_id = item_id, user_id = request.session["user_id"]).exists():
+                cart_item = ShoppingItemsIncart.objects.get(item_id = item_id)
+            else:
+                cart_item = ShoppingItemsIncart()
             cart_item.amount = item_amount
             cart_item.item_id = new_item.item_id
             cart_item.user_id = request.session["user_id"]
@@ -117,15 +115,10 @@ class Cart(View):
 
             item_incart = ShoppingItemsIncart.objects.filter(user_id = request.session["user_id"])
 
-            print('item_incart:')
-            print(item_incart)
-
             item_list = []
             charge_total = 0
             for item in item_incart:
                 item_detail = ShoppingItem.objects.get(item_id = item.item_id)
-                print('item_detail:')
-                print(item_detail)
 
                 item_dict = {
                     "name":item_detail.name,
@@ -137,14 +130,36 @@ class Cart(View):
                 item_list.append(item_dict)
                 charge_total += item.amount * item_detail.price
 
-            print('charge_total:')
-            print(charge_total)
             context = {
                 "item_list":item_list,
                 "charge_total":charge_total
             }
             return render(request, "ec_site/cart.html",context)
     
+class CartCorrect(View):
+    def get(self, request, pk):
+        cart_item = ShoppingItemsIncart.objects.get(item_id=pk)
+        item_detail = ShoppingItem.objects.get(item_id = cart_item.item_id)
+
+        stock_num_list = []
+        if item_detail.stock > 0:
+            for i in range(0, item_detail.stock):
+                stock_num_list.append(i+1)
+
+        context = {
+            "item_id": item_detail.item_id,
+            "name":item_detail.name,
+            "color": item_detail.color,
+            "manufacturer":item_detail.manufacturer,
+            "price": item_detail.price,
+            "amount": cart_item.amount,
+            "num_list": stock_num_list,
+        }
+        return render(request, "ec_site/cartCorrect.html", context)
+    
+    # def post(self, request, pk):
+        
+
 
 class UserLogin(View):
     def get(self, request, *args, **kwargs):
